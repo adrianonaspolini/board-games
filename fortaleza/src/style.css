@@ -1,0 +1,104 @@
+:root {
+  --bg: #120c08;
+  --btn: rgba(242, 226, 191, 0.12);
+  --btn-border: rgba(242, 226, 191, 0.35);
+  --btn-on: rgba(242, 200, 120, 0.45);
+  --text: #f2e2bf;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  font-family: system-ui, sans-serif;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#stage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+#screen {
+  display: block;
+  background: #000;
+  border-radius: 4px;
+}
+
+#controls {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 22px 22px;
+  height: 200px;
+}
+
+#dpad {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: var(--btn);
+  border: 2px solid var(--btn-border);
+  touch-action: none;
+}
+
+#dpad .arrow {
+  position: absolute;
+  font-size: 22px;
+  opacity: 0.75;
+  pointer-events: none;
+  transition: opacity 0.05s, transform 0.05s;
+}
+#dpad .up { top: 10px; left: 50%; transform: translateX(-50%); }
+#dpad .down { bottom: 10px; left: 50%; transform: translateX(-50%); }
+#dpad .left { left: 14px; top: 50%; transform: translateY(-50%); }
+#dpad .right { right: 14px; top: 50%; transform: translateY(-50%); }
+#dpad.on-up .up, #dpad.on-down .down, #dpad.on-left .left, #dpad.on-right .right {
+  opacity: 1;
+  color: #ffd27a;
+  text-shadow: 0 0 8px #ffb02e;
+}
+
+#action {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 2px solid var(--btn-border);
+  background: var(--btn);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  touch-action: none;
+}
+#action.on { background: var(--btn-on); }
+
+/* Paisagem: controles nas laterais, a tela do jogo no meio, sem sobreposição. */
+@media (orientation: landscape) {
+  #app { flex-direction: row; }
+  #stage { order: 2; padding: 6px 0; }
+  #controls { display: contents; }
+  #dpad, #action { align-self: flex-end; margin-bottom: max(18px, env(safe-area-inset-bottom)); flex: 0 0 auto; }
+  #dpad { order: 1; width: 138px; height: 138px; margin-left: 14px; margin-right: 10px; }
+  #action { order: 3; width: 92px; height: 92px; margin-right: 18px; margin-left: 10px; }
+}

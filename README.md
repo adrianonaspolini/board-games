@@ -1,5 +1,8 @@
 # Jogos de Tabuleiro
 
+> Este repositório também tem **A Fortaleza de Areia**, um jogo de plataforma
+> em HTML5 na pasta [`fortaleza/`](fortaleza/README.md).
+
 App Flutter (Android e iOS) com jogos de tabuleiro clássicos. O primeiro é o
 **Jogo da Onça**. A interface usa `CustomPainter` e widgets animados, sem
 motor de jogos.
