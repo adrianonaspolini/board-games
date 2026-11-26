@@ -1,12 +1,10 @@
 // Desenho no canvas: sala atual (tela fixa), personagens, HUD e mensagens.
 
-import { ROOM_COLS, ROOM_H, ROOM_ROWS, ROOM_W, TH, TW } from '../engine/constants.js';
+import { ROOM_H, ROOM_W, TH, TW } from '../engine/constants.js';
 import { T } from '../engine/tiles.js';
 import { GUARD_PALETTE, HERO_PALETTE, drawFigure, poseFor } from './figures.js';
 
-export const HUD_H = 14;
-export const VIEW_W = ROOM_W;
-export const VIEW_H = ROOM_H + HUD_H;
+export const HUD_H = 16;
 const FLOOR_H = 7;
 
 const C = {
@@ -41,7 +39,8 @@ export class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.scale = 1;
-    this.lastRoom = null;
+    this.vw = ROOM_W; // largura visível, em pixels do jogo
+    this.vh = ROOM_H;
   }
 
   /** Ajusta a resolução interna ao tamanho exibido (nítido em telas retina). */
@@ -51,7 +50,10 @@ export class Renderer {
     this.canvas.style.height = `${cssHeight}px`;
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
-    this.scale = this.canvas.width / VIEW_W;
+    // Tela cheia: a sala inteira cabe; o espaço que sobra mostra o entorno.
+    this.scale = Math.min(this.canvas.width / ROOM_W, this.canvas.height / ROOM_H);
+    this.vw = this.canvas.width / this.scale;
+    this.vh = this.canvas.height / this.scale;
   }
 
   begin() {
@@ -59,36 +61,34 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, this.vw, this.vh);
   }
 
   drawGame(game, frame) {
     this.begin();
     const world = game.world;
     const { rx, ry } = world.heroRoom();
-    const ox = rx * ROOM_W;
-    const oy = ry * ROOM_H;
     const ctx = this.ctx;
-
+    // A sala do herói fica centralizada; ao redor, as salas vizinhas.
+    const ox = Math.round((this.vw - ROOM_W) / 2) - rx * ROOM_W;
+    const oy = Math.round((this.vh - ROOM_H) / 2) - ry * ROOM_H;
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, ROOM_W, ROOM_H);
-    ctx.clip();
-    ctx.translate(-ox, -oy);
-    const c0 = rx * ROOM_COLS;
-    const r0 = ry * ROOM_ROWS;
-    // Uma coluna a mais à esquerda para desenhar bordas de piso vizinhas.
-    for (let r = r0; r < r0 + ROOM_ROWS; r++) {
-      for (let c = c0 - 1; c < c0 + ROOM_COLS; c++) this.drawBack(world, c, r, frame);
+    ctx.translate(ox, oy);
+    const cA = Math.floor(-ox / TW) - 1;
+    const cB = Math.ceil((this.vw - ox) / TW);
+    const rA = Math.floor(-oy / TH);
+    const rB = Math.ceil((this.vh - oy) / TH);
+    for (let r = rA; r <= rB; r++) {
+      for (let c = cA; c <= cB; c++) this.drawBack(world, c, r, frame);
     }
-    for (let r = r0; r < r0 + ROOM_ROWS; r++) {
-      for (let c = c0 - 1; c < c0 + ROOM_COLS; c++) this.drawCellBehind(world, c, r, frame);
+    for (let r = rA; r <= rB; r++) {
+      for (let c = cA; c <= cB; c++) this.drawCellBehind(world, c, r, frame);
     }
     this.drawRubble(world);
     for (const g of world.guards) this.drawCharacter(g, GUARD_PALETTE, frame);
     this.drawCharacter(world.hero, HERO_PALETTE, frame);
-    for (let r = r0; r < r0 + ROOM_ROWS; r++) {
-      for (let c = c0 - 1; c < c0 + ROOM_COLS; c++) this.drawCellFront(world, c, r, frame);
+    for (let r = rA; r <= rB; r++) {
+      for (let c = cA; c <= cB; c++) this.drawCellFront(world, c, r, frame);
     }
     this.drawDebris(world);
     ctx.restore();
@@ -356,19 +356,24 @@ export class Renderer {
 
   // ---- HUD e mensagens ----------------------------------------------------------
 
+  /** HUD sobreposto no alto da tela. */
   drawHud(game) {
     const ctx = this.ctx;
-    const y = ROOM_H;
-    ctx.fillStyle = C.hudBg;
-    ctx.fillRect(0, y, VIEW_W, HUD_H);
+    const W = this.vw;
+    const grad = ctx.createLinearGradient(0, 0, 0, HUD_H + 8);
+    grad.addColorStop(0, 'rgba(10,6,3,0.7)');
+    grad.addColorStop(1, 'rgba(10,6,3,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, HUD_H + 8);
+    const y = 9;
     const hero = game.world.hero;
     for (let i = 0; i < hero.maxHp; i++) {
-      this.diamond(4 + i * 9, y + 7, i < hero.hp ? C.life : C.lifeEmpty);
+      this.diamond(8 + i * 9, y, i < hero.hp ? C.life : C.lifeEmpty);
     }
     const g = game.world.guards.find((x) => x.state !== 'dead' && x.state !== 'idle' && x.row === hero.row);
     if (g) {
       for (let i = 0; i < g.maxHp; i++) {
-        this.diamond(VIEW_W - 8 - i * 9, y + 7, i < g.hp ? C.guardLife : '#2a3440');
+        this.diamond(W - 8 - i * 9, y, i < g.hp ? C.guardLife : '#2a3440');
       }
     }
     const s = game.secondsLeft;
@@ -377,7 +382,7 @@ export class Renderer {
     ctx.font = 'bold 9px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Fase ${game.levelIndex + 1} · ${text}`, VIEW_W / 2, y + HUD_H / 2 + 0.5);
+    ctx.fillText(`Fase ${game.levelIndex + 1} · ${text}`, W / 2, y + 0.5);
   }
 
   diamond(x, y, color) {
@@ -396,16 +401,18 @@ export class Renderer {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(10,6,3,0.72)';
-    ctx.fillRect(0, ROOM_H / 2 - 26, ROOM_W, subtitle ? 52 : 34);
+    const cx = this.vw / 2;
+    const cy = this.vh / 2;
+    ctx.fillRect(0, cy - 26, this.vw, subtitle ? 52 : 34);
     ctx.fillStyle = '#f6dfa8';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = 'bold 15px Georgia, serif';
-    ctx.fillText(title, ROOM_W / 2, ROOM_H / 2 - (subtitle ? 9 : 9));
+    ctx.fillText(title, cx, cy - 9);
     if (subtitle) {
       ctx.font = '9px system-ui, sans-serif';
       ctx.fillStyle = '#e8d3a8';
-      ctx.fillText(subtitle, ROOM_W / 2, ROOM_H / 2 + 12);
+      ctx.fillText(subtitle, cx, cy + 12);
     }
     ctx.restore();
   }
@@ -427,12 +434,21 @@ export class Renderer {
   drawTitle(frame) {
     this.begin();
     const ctx = this.ctx;
+    const VIEW_W = ROOM_W;
+    const VIEW_H = ROOM_H + 14;
+    const fill = ctx.createLinearGradient(0, 0, 0, this.vh);
+    fill.addColorStop(0, '#f0b45a');
+    fill.addColorStop(0.55, '#c56a2c');
+    fill.addColorStop(1, '#3a1f12');
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, 0, this.vw, this.vh);
+    ctx.save();
+    ctx.translate((this.vw - VIEW_W) / 2, (this.vh - VIEW_H) / 2);
     const grad = ctx.createLinearGradient(0, 0, 0, VIEW_H);
     grad.addColorStop(0, '#f0b45a');
     grad.addColorStop(0.55, '#c56a2c');
     grad.addColorStop(1, '#3a1f12');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    void grad;
     // Sol e dunas
     ctx.fillStyle = 'rgba(255,240,200,0.8)';
     ctx.beginPath();
@@ -441,9 +457,10 @@ export class Renderer {
     ctx.fillStyle = '#7a3f1c';
     ctx.beginPath();
     ctx.moveTo(0, 150);
-    for (let x = 0; x <= VIEW_W; x += 10) ctx.lineTo(x, 150 + Math.sin(x / 40) * 8);
-    ctx.lineTo(VIEW_W, VIEW_H);
-    ctx.lineTo(0, VIEW_H);
+    ctx.lineTo(-400, 150);
+    for (let x = -400; x <= VIEW_W + 400; x += 10) ctx.lineTo(x, 150 + Math.sin(x / 40) * 8);
+    ctx.lineTo(VIEW_W + 400, VIEW_H + 400);
+    ctx.lineTo(-400, VIEW_H + 400);
     ctx.fill();
     // Fortaleza
     ctx.fillStyle = '#2d1a0f';
@@ -471,6 +488,7 @@ export class Renderer {
     }
     // Herói na tela de título
     drawFigure(ctx, 200, 152, -1, poseFor({ state: 'stand', t: 0, kind: 'hero' }, frame), HERO_PALETTE);
+    ctx.restore();
   }
 }
 

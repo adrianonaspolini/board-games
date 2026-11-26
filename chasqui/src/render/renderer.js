@@ -1,14 +1,12 @@
 // Desenho no canvas: paisagem andina, sala atual (tela fixa), personagens,
 // HUD e telas de título e de chegada.
 
-import { ROOM_COLS, ROOM_H, ROOM_ROWS, ROOM_W, TH, TW } from '../engine/constants.js';
+import { ROOM_H, ROOM_W, TH, TW } from '../engine/constants.js';
 import { T } from '../engine/tiles.js';
 import { MAX_BREATH } from '../game/hero.js';
 import { GUARD_PALETTE, HERO_PALETTE, drawFigure, poseFor } from './figures.js';
 
-export const HUD_H = 14;
-export const VIEW_W = ROOM_W;
-export const VIEW_H = ROOM_H + HUD_H;
+export const HUD_H = 16;
 const FLOOR_H = 7;
 const TAU = Math.PI * 2;
 
@@ -52,23 +50,30 @@ export class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.scale = 1;
+    this.vw = ROOM_W; // largura visível, em pixels do jogo
+    this.vh = ROOM_H;
   }
 
-  /** Ajusta a resolução interna ao tamanho exibido (nítido em telas retina). */
+  /**
+   * Tela cheia: a sala inteira cabe na tela (sem distorcer nem cortar) e o
+   * espaço que sobra mostra a continuação do cenário.
+   */
   resize(cssWidth, cssHeight) {
     const dpr = window.devicePixelRatio || 1;
     this.canvas.style.width = `${cssWidth}px`;
     this.canvas.style.height = `${cssHeight}px`;
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
-    this.scale = this.canvas.width / VIEW_W;
+    this.scale = Math.min(this.canvas.width / ROOM_W, this.canvas.height / ROOM_H);
+    this.vw = this.canvas.width / this.scale;
+    this.vh = this.canvas.height / this.scale;
   }
 
   begin() {
     const ctx = this.ctx;
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, this.vw, this.vh);
   }
 
   drawGame(game, frame) {
@@ -78,16 +83,18 @@ export class Renderer {
     const ctx = this.ctx;
 
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, ROOM_W, ROOM_H);
-    ctx.clip();
     this.drawSky(world.level.def.theme ?? 'valley', rx, ry, frame);
-    ctx.translate(-rx * ROOM_W, -ry * ROOM_H);
-    const c0 = rx * ROOM_COLS;
-    const r0 = ry * ROOM_ROWS;
+    // A sala do herói fica centralizada; ao redor, as salas vizinhas.
+    const ox = Math.round((this.vw - ROOM_W) / 2) - rx * ROOM_W;
+    const oy = Math.round((this.vh - ROOM_H) / 2) - ry * ROOM_H;
+    ctx.translate(ox, oy);
+    const cA = Math.floor(-ox / TW) - 1;
+    const cB = Math.ceil((this.vw - ox) / TW);
+    const rA = Math.max(0, Math.floor(-oy / TH));
+    const rB = Math.ceil((this.vh - oy) / TH);
     const each = (fn) => {
-      for (let r = r0; r < r0 + ROOM_ROWS; r++) {
-        for (let c = c0 - 1; c <= c0 + ROOM_COLS; c++) fn(c, r);
+      for (let r = rA; r <= rB; r++) {
+        for (let c = cA; c <= cB; c++) fn(c, r);
       }
     };
     each((c, r) => this.drawBack(world, c, r, frame));
@@ -109,25 +116,27 @@ export class Renderer {
   drawSky(themeName, rx, ry, frame) {
     const ctx = this.ctx;
     const th = THEMES[themeName] ?? THEMES.valley;
-    const g = ctx.createLinearGradient(0, 0, 0, ROOM_H);
+    const W = this.vw;
+    const H = this.vh;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, th.sky[0]);
     g.addColorStop(1, th.sky[1]);
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, ROOM_W, ROOM_H);
+    ctx.fillRect(0, 0, W, H);
     // Montanhas distantes (os Apus), com leve paralaxe entre as salas.
     const shift = rx * 60 + ry * 20;
     const ridge = (base, amp, color, seed, snow) => {
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.moveTo(0, ROOM_H);
+      ctx.moveTo(0, H);
       const pts = [];
-      for (let x = -40; x <= ROOM_W + 40; x += 20) {
+      for (let x = -40; x <= W + 40; x += 20) {
         const k = Math.floor((x + shift * seed) / 20);
         const y = base - hash(k, seed, 3) * amp - (k % 3 === 0 ? amp * 0.5 : 0);
         pts.push([x - ((shift * seed) % 20), y]);
       }
       for (const [x, y] of pts) ctx.lineTo(x, y);
-      ctx.lineTo(ROOM_W, ROOM_H);
+      ctx.lineTo(W, H);
       ctx.fill();
       if (snow) {
         ctx.fillStyle = snow;
@@ -143,10 +152,10 @@ export class Renderer {
         }
       }
     };
-    ridge(ROOM_H * 0.62, 60, th.far, 1, th.snow);
-    ridge(ROOM_H * 0.85, 34, th.near, 2, null);
+    ridge(H * 0.62, 60, th.far, 1, th.snow);
+    ridge(H * 0.85, 34, th.near, 2, null);
     // Um condor ao longe.
-    const bx = (frame * 0.25 + rx * 90) % (ROOM_W + 60) - 30;
+    const bx = (frame * 0.25 + rx * 90) % (W + 60) - 30;
     const by = 30 + Math.sin(frame * 0.01) * 6;
     ctx.strokeStyle = 'rgba(30,30,40,0.6)';
     ctx.lineWidth = 1.2;
@@ -548,26 +557,28 @@ export class Renderer {
 
   // ---- HUD e mensagens -------------------------------------------------------
 
+  /** HUD sobreposto no alto da tela. */
   drawHud(game) {
     const ctx = this.ctx;
-    const y = ROOM_H;
-    ctx.fillStyle = C.hudBg;
-    ctx.fillRect(0, y, VIEW_W, HUD_H);
-    // Faixa de tocapu no topo do HUD.
-    for (let i = 0; i < VIEW_W / 4; i++) {
-      ctx.fillStyle = i % 2 ? '#b4472c' : '#e9d9b0';
-      ctx.fillRect(i * 4, y, 4, 1.5);
-    }
+    const W = this.vw;
+    const top = 2;
+    const grad = ctx.createLinearGradient(0, 0, 0, HUD_H + 8);
+    grad.addColorStop(0, 'rgba(15,10,6,0.65)');
+    grad.addColorStop(1, 'rgba(15,10,6,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, HUD_H + 8);
+    const y = top + 7;
     const world = game.world;
     const hero = world.hero;
+    const left = 8;
     for (let i = 0; i < hero.maxHp; i++) {
-      this.diamond(5 + i * 9, y + 8, i < hero.hp ? C.life : C.lifeEmpty);
+      this.diamond(left + i * 9, y, i < hero.hp ? C.life : C.lifeEmpty);
     }
-    let right = VIEW_W - 6;
+    let right = W - 8;
     const g = world.guards.find((x) => x.state !== 'dead' && x.state !== 'idle' && x.row === hero.row);
     if (g) {
       for (let i = 0; i < g.maxHp; i++) {
-        this.diamond(right - i * 9, y + 8, i < g.hp ? C.enemy : '#2a3046');
+        this.diamond(right - i * 9, y, i < g.hp ? C.enemy : '#2a3046');
       }
       right -= g.maxHp * 9 + 6;
     }
@@ -575,18 +586,21 @@ export class Renderer {
     ctx.font = 'bold 8.5px system-ui, sans-serif';
     if (world.altitude > 0) {
       // Fôlego
-      const bx = 9 + hero.maxHp * 9;
+      const bx = left + 4 + hero.maxHp * 9;
       const w = 46;
-      ctx.fillStyle = '#26323a';
-      ctx.fillRect(bx, y + 5.5, w, 5);
+      ctx.fillStyle = 'rgba(20,30,38,0.8)';
+      ctx.fillRect(bx, y - 2.5, w, 5);
       ctx.fillStyle = hero.breath < 25 ? '#e6a07c' : C.breath;
-      ctx.fillRect(bx, y + 5.5, (w * hero.breath) / MAX_BREATH, 5);
+      ctx.fillRect(bx, y - 2.5, (w * hero.breath) / MAX_BREATH, 5);
     }
     const s = game.secondsLeft;
     const text = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     ctx.fillStyle = s < 60 ? '#ff8a7a' : C.hudText;
     ctx.textAlign = 'center';
-    ctx.fillText(`Fase ${game.levelIndex + 1} · ${text}`, VIEW_W / 2 + 18, y + 8.5);
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 2;
+    ctx.fillText(`Fase ${game.levelIndex + 1} · ${text}`, W / 2, y + 0.5);
+    ctx.shadowBlur = 0;
   }
 
   diamond(x, y, color) {
@@ -605,16 +619,18 @@ export class Renderer {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(20,14,10,0.74)';
-    ctx.fillRect(0, ROOM_H / 2 - 26, ROOM_W, subtitle ? 52 : 34);
+    const cx = this.vw / 2;
+    const cy = this.vh / 2;
+    ctx.fillRect(0, cy - 26, this.vw, subtitle ? 52 : 34);
     ctx.fillStyle = '#f6e2ad';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = 'bold 15px Georgia, serif';
-    ctx.fillText(title, ROOM_W / 2, ROOM_H / 2 - 9);
+    ctx.fillText(title, cx, cy - 9);
     if (subtitle) {
       ctx.font = '9px system-ui, sans-serif';
       ctx.fillStyle = '#eadbb6';
-      ctx.fillText(subtitle, ROOM_W / 2, ROOM_H / 2 + 12);
+      ctx.fillText(subtitle, cx, cy + 12);
     }
     ctx.restore();
   }
@@ -639,12 +655,16 @@ export class Renderer {
   /** Chegada a Cusco durante o Inti Raymi. */
   drawFinale(frame) {
     const ctx = this.ctx;
-    const g = ctx.createLinearGradient(0, 0, 0, ROOM_H);
+    const W = this.vw;
+    const H = this.vh;
+    ctx.save();
+    ctx.translate(0, (H - ROOM_H) / 2);
+    const g = ctx.createLinearGradient(0, -(H - ROOM_H) / 2, 0, ROOM_H);
     g.addColorStop(0, '#f6b04a');
     g.addColorStop(1, '#a8452a');
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, ROOM_W, ROOM_H);
-    const sx = ROOM_W / 2;
+    ctx.fillRect(0, -(H - ROOM_H) / 2, W, H);
+    const sx = W / 2;
     const sy = 70;
     ctx.save();
     ctx.translate(sx, sy);
@@ -670,8 +690,9 @@ export class Renderer {
     ctx.fill();
     // Praça de Cusco com muros de pedra e gente dançando.
     ctx.fillStyle = '#4d2a1c';
-    ctx.fillRect(0, 150, ROOM_W, 42);
-    for (let i = 0; i < 14; i++) {
+    ctx.fillRect(0, 150, W, H);
+    const n = Math.floor(W / 22);
+    for (let i = 0; i < n; i++) {
       const px = 14 + i * 22;
       const hop = Math.abs(Math.sin(frame * 0.08 + i)) * 4;
       ctx.fillStyle = i % 3 === 0 ? '#b4472c' : i % 3 === 1 ? '#2f3d6e' : '#e3b23c';
@@ -688,9 +709,10 @@ export class Renderer {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff4d6';
     ctx.font = 'bold 15px Georgia, serif';
-    ctx.fillText('A mensagem chegou a Cusco!', ROOM_W / 2, 164);
+    ctx.fillText('A mensagem chegou a Cusco!', W / 2, 164);
     ctx.font = '9px system-ui, sans-serif';
-    ctx.fillText('A cidade celebra o Inti Raymi. Toque para jogar de novo.', ROOM_W / 2, 180);
+    ctx.fillText('A cidade celebra o Inti Raymi. Toque para jogar de novo.', W / 2, 180);
+    ctx.restore();
   }
 
   drawTitle(frame) {
@@ -698,35 +720,40 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, 0, VIEW_W, VIEW_H);
+    const W = this.vw;
+    const H = this.vh;
+    ctx.rect(0, 0, W, H);
     ctx.clip();
     this.drawSky('peaks', 0, 0, frame);
     // Caminho em zigue-zague subindo a montanha.
+    ctx.save();
+    ctx.translate((W - ROOM_W) / 2, H - ROOM_H);
     ctx.strokeStyle = '#d9c08a';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(40, VIEW_H);
+    ctx.moveTo(40, ROOM_H + 20);
     ctx.lineTo(120, 170);
     ctx.lineTo(60, 150);
     ctx.lineTo(150, 128);
     ctx.lineTo(110, 112);
     ctx.lineTo(180, 98);
     ctx.stroke();
+    const run = { state: 'run', t: frame, kind: 'hero' };
+    drawFigure(ctx, 230, ROOM_H - 20, 1, poseFor(run, frame), HERO_PALETTE);
+    ctx.restore();
     ctx.fillStyle = 'rgba(10,20,40,0.35)';
-    ctx.fillRect(0, 0, VIEW_W, 56);
+    ctx.fillRect(0, 0, W, 56);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff4d6';
     ctx.font = 'bold 26px Georgia, serif';
-    ctx.fillText('Chasqui', VIEW_W / 2, 22);
+    ctx.fillText('Chasqui', W / 2, 22);
     ctx.font = 'italic 11px Georgia, serif';
-    ctx.fillText('O Caminho do Sol', VIEW_W / 2, 42);
+    ctx.fillText('O Caminho do Sol', W / 2, 42);
     if (Math.sin(frame * 0.08) > -0.3) {
       ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText('Toque para começar', VIEW_W / 2, 190);
+      ctx.fillText('Toque para começar', W / 2, H * 0.45);
     }
-    const run = { state: 'run', t: frame, kind: 'hero' };
-    drawFigure(ctx, 230, 172, 1, poseFor(run, frame), HERO_PALETTE);
     ctx.restore();
   }
 }

@@ -1,7 +1,7 @@
 import { TICKS_PER_SECOND } from './engine/constants.js';
 import { Game } from './game/game.js';
 import { Input } from './input/input.js';
-import { Renderer, VIEW_H, VIEW_W } from './render/renderer.js';
+import { Renderer } from './render/renderer.js';
 import { Sfx } from './audio/sfx.js';
 
 const canvas = document.getElementById('screen');
@@ -15,11 +15,7 @@ let game = null;
 let frame = 0;
 
 function fit() {
-  const landscape = window.innerWidth > window.innerHeight;
-  const availW = landscape ? stage.clientWidth : stage.clientWidth - 8;
-  const availH = stage.clientHeight - (landscape ? 0 : 8);
-  const scale = Math.min(availW / VIEW_W, availH / VIEW_H);
-  renderer.resize(Math.floor(VIEW_W * scale), Math.floor(VIEW_H * scale));
+  renderer.resize(stage.clientWidth, stage.clientHeight);
 }
 window.addEventListener('resize', fit);
 window.addEventListener('orientationchange', () => setTimeout(fit, 200));
