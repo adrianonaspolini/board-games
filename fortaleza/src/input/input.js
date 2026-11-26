@@ -40,71 +40,54 @@ export class Input {
     target.addEventListener('blur', () => this.keys.clear());
   }
 
-  /** Direcional: a direção vem do ângulo do dedo em relação ao centro. */
-  attachDpad(el) {
-    const active = new Map();
-    const update = () => {
-      const p = { left: false, right: false, up: false, down: false };
-      for (const d of active.values()) Object.keys(p).forEach((k) => { p[k] ||= d[k]; });
-      this.pad = p;
-      for (const k of ['left', 'right', 'up', 'down']) el.classList.toggle(`on-${k}`, p[k]);
+  /**
+   * Grupo de botões para uma mão. Cada dedo ativa o botão sob ele e pode
+   * deslizar para outro botão do mesmo grupo sem levantar (ex.: de ▲ para
+   * Ação durante um pulo). Vários dedos ao mesmo tempo também funcionam.
+   */
+  attachGroup(el) {
+    const keys = [...el.querySelectorAll('[data-key]')];
+    const fingers = new Map(); // pointerId -> nome da tecla (ou null)
+
+    const keyAt = (x, y) => {
+      for (const k of keys) {
+        const r = k.getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return k.dataset.key;
+      }
+      return null;
     };
-    const dirFrom = (e) => {
-      const r = el.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
-      const dead = r.width * 0.12;
-      if (Math.hypot(dx, dy) < dead) return { left: false, right: false, up: false, down: false };
-      // 8 setores: diagonais a cada 45°.
-      const a = Math.atan2(dy, dx);
-      const sector = Math.round(a / (Math.PI / 4)); // -4..4
-      return {
-        right: [-1, 0, 1].includes(sector),
-        down: [1, 2, 3].includes(sector),
-        left: [3, 4, -4, -3].includes(sector),
-        up: [-3, -2, -1].includes(sector),
-      };
+    const update = () => {
+      const held = new Set(fingers.values());
+      for (const k of keys) {
+        const name = k.dataset.key;
+        const on = held.has(name);
+        k.classList.toggle('on', on);
+        if (name === 'action') this.actionTouch = on;
+        else this.pad[name] = on;
+      }
     };
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       capture(el, e.pointerId);
-      active.set(e.pointerId, dirFrom(e));
+      fingers.set(e.pointerId, keyAt(e.clientX, e.clientY));
       update();
       this.onAnyPress?.();
     });
     el.addEventListener('pointermove', (e) => {
-      if (!active.has(e.pointerId)) return;
-      active.set(e.pointerId, dirFrom(e));
-      update();
+      if (!fingers.has(e.pointerId)) return;
+      const k = keyAt(e.clientX, e.clientY);
+      if (k !== fingers.get(e.pointerId)) {
+        fingers.set(e.pointerId, k);
+        update();
+      }
     });
     const end = (e) => {
-      active.delete(e.pointerId);
+      fingers.delete(e.pointerId);
       update();
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
     el.addEventListener('lostpointercapture', end);
-  }
-
-  attachAction(el) {
-    const ids = new Set();
-    const update = () => {
-      this.actionTouch = ids.size > 0;
-      el.classList.toggle('on', this.actionTouch);
-    };
-    el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      capture(el, e.pointerId);
-      ids.add(e.pointerId);
-      update();
-      this.onAnyPress?.();
-    });
-    const end = (e) => {
-      ids.delete(e.pointerId);
-      update();
-    };
-    el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
-    el.addEventListener('lostpointercapture', end);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 }

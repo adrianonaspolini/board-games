@@ -12,13 +12,15 @@
   <main id="app">
     <div id="stage"><canvas id="screen" aria-label="Tela do jogo"></canvas></div>
     <div id="controls">
-      <div id="dpad" role="group" aria-label="Direcional">
-        <span class="arrow up">▲</span>
-        <span class="arrow right">▶</span>
-        <span class="arrow down">▼</span>
-        <span class="arrow left">◀</span>
+      <div id="pad-left" class="pad" role="group" aria-label="Andar">
+        <button type="button" class="key" data-key="left" aria-label="Esquerda">◀</button>
+        <button type="button" class="key" data-key="right" aria-label="Direita">▶</button>
       </div>
-      <button id="action" type="button" aria-label="Ação">Ação</button>
+      <div id="pad-right" class="pad" role="group" aria-label="Pular, descer e ação">
+        <button type="button" class="key" data-key="up" aria-label="Cima">▲</button>
+        <button type="button" class="key" data-key="down" aria-label="Baixo">▼</button>
+        <button type="button" class="key action" data-key="action" aria-label="Ação">Ação</button>
+      </div>
     </div>
   </main>
   <script type="module" src="./src/main.js"></script>

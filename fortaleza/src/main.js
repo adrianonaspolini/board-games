@@ -46,8 +46,8 @@ function onPress() {
 }
 input.onAnyPress = onPress;
 input.attachKeyboard();
-input.attachDpad(document.getElementById('dpad'));
-input.attachAction(document.getElementById('action'));
+input.attachGroup(document.getElementById('pad-left'));
+input.attachGroup(document.getElementById('pad-right'));
 canvas.addEventListener('pointerdown', onPress);
 
 const STEP = 1000 / TICKS_PER_SECOND;

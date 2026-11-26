@@ -48,57 +48,68 @@ html, body {
   flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 12px 22px 22px;
-  height: 200px;
+  align-items: flex-end;
+  padding: 12px max(18px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
 }
 
-#dpad {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: var(--btn);
-  border: 2px solid var(--btn-border);
+.pad {
+  display: grid;
+  gap: 12px;
   touch-action: none;
 }
 
-#dpad .arrow {
-  position: absolute;
-  font-size: 22px;
-  opacity: 0.75;
-  pointer-events: none;
-  transition: opacity 0.05s, transform 0.05s;
-}
-#dpad .up { top: 10px; left: 50%; transform: translateX(-50%); }
-#dpad .down { bottom: 10px; left: 50%; transform: translateX(-50%); }
-#dpad .left { left: 14px; top: 50%; transform: translateY(-50%); }
-#dpad .right { right: 14px; top: 50%; transform: translateY(-50%); }
-#dpad.on-up .up, #dpad.on-down .down, #dpad.on-left .left, #dpad.on-right .right {
-  opacity: 1;
-  color: #ffd27a;
-  text-shadow: 0 0 8px #ffb02e;
-}
+/* Mão esquerda: ◀ ▶ lado a lado. */
+#pad-left { grid-template-columns: repeat(2, 76px); grid-template-rows: 76px; }
 
-#action {
-  width: 104px;
-  height: 104px;
-  border-radius: 50%;
+/* Mão direita: ▲ sobre ▼, e Ação ao lado ocupando as duas linhas. */
+#pad-right {
+  grid-template-columns: 68px 92px;
+  grid-template-rows: 68px 68px;
+  grid-template-areas: "up action" "down action";
+}
+#pad-right [data-key="up"] { grid-area: up; }
+#pad-right [data-key="down"] { grid-area: down; }
+#pad-right .action { grid-area: action; align-self: center; height: 92px; border-radius: 50%; }
+
+.key {
+  border-radius: 18px;
   border: 2px solid var(--btn-border);
   background: var(--btn);
   color: var(--text);
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 700;
+  padding: 0;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#action.on { background: var(--btn-on); }
+.key.action { font-size: 17px; }
+.key.on {
+  background: var(--btn-on);
+  color: #ffd27a;
+}
 
-/* Paisagem: controles nas laterais, a tela do jogo no meio, sem sobreposição. */
+/* Paisagem: cada mão de um lado da tela do jogo, sem sobreposição. */
 @media (orientation: landscape) {
   #app { flex-direction: row; }
   #stage { order: 2; padding: 6px 0; }
   #controls { display: contents; }
-  #dpad, #action { align-self: flex-end; margin-bottom: max(18px, env(safe-area-inset-bottom)); flex: 0 0 auto; }
-  #dpad { order: 1; width: 138px; height: 138px; margin-left: 14px; margin-right: 10px; }
-  #action { order: 3; width: 92px; height: 92px; margin-right: 18px; margin-left: 10px; }
+  .pad { align-self: flex-end; margin-bottom: max(18px, env(safe-area-inset-bottom)); }
+  #pad-left {
+    order: 1;
+    grid-template-columns: repeat(2, 62px);
+    grid-template-rows: 62px;
+    gap: 10px;
+    margin-left: max(12px, env(safe-area-inset-left));
+    margin-right: 10px;
+  }
+  #pad-right {
+    order: 3;
+    grid-template-columns: 58px 76px;
+    grid-template-rows: 58px 58px;
+    gap: 10px;
+    margin-right: max(12px, env(safe-area-inset-right));
+    margin-left: 10px;
+  }
+  #pad-right .action { height: 76px; }
 }

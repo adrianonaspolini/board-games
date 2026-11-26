@@ -1,7 +1,7 @@
 # A Fortaleza de Areia
 
 Jogo de plataforma original em HTML5 (canvas), feito para celular, com
-controles virtuais na tela: um direcional e um botão de ação. Um aventureiro
+controles virtuais na tela: ◀ ▶ na mão esquerda e ▲ ▼ + Ação na mão direita. Um aventureiro
 precisa atravessar as 3 fases de uma fortaleza no deserto, desviando de
 armadilhas e vencendo guardas em duelos de espada, antes que o tempo acabe.
 
@@ -40,7 +40,7 @@ src/
 ├── engine/   grade, colisão, constantes, RNG (lógica pura, sem DOM)
 ├── game/     herói, guardas, combate, armadilhas, mundo, fases e relógio
 ├── render/   desenho no canvas (personagens articulados, cenário, HUD)
-├── input/    direcional e botão de ação (toque) + teclado
+├── input/    botões de toque divididos por mão + teclado
 └── audio/    efeitos sintetizados com Web Audio
 test/         Vitest: movimento, armadilhas, combate e roteiros que vencem cada fase
 docs/         mecânicas e decisões

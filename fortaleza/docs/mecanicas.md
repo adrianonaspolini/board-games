@@ -38,6 +38,14 @@ criados para este projeto.
 
 ## Controles (5 comandos)
 
+Os botões ficam divididos entre as mãos:
+- **Mão esquerda:** ◀ e ▶.
+- **Mão direita:** ▲, ▼ e Ação.
+
+Em cada mão, o dedo pode deslizar de um botão para outro sem levantar.
+Por exemplo, ▲ para pular e, em seguida, deslizar para Ação para agarrar a
+borda.
+
 | Comando | Em pé | No ar | Pendurado | Em duelo |
 |---|---|---|---|---|
 | ← / → | corre (ou vira) | — | — | avança / recua |
