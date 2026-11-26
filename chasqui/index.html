@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#14100c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Chasqui</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <main id="app">
+    <div id="stage"><canvas id="screen" aria-label="Tela do jogo"></canvas></div>
+    <div id="controls">
+      <div id="pad-left" class="pad" role="group" aria-label="Andar">
+        <button type="button" class="key" data-key="left" aria-label="Esquerda">◀</button>
+        <button type="button" class="key" data-key="right" aria-label="Direita">▶</button>
+      </div>
+      <div id="pad-right" class="pad" role="group" aria-label="Pular, descer e ação">
+        <button type="button" class="key" data-key="up" aria-label="Cima">▲</button>
+        <button type="button" class="key" data-key="down" aria-label="Baixo">▼</button>
+        <button type="button" class="key action" data-key="action" aria-label="Ação">Ação</button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

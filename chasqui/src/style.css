@@ -1,0 +1,115 @@
+:root {
+  --bg: #120c08;
+  --btn: rgba(242, 226, 191, 0.12);
+  --btn-border: rgba(242, 226, 191, 0.35);
+  --btn-on: rgba(242, 200, 120, 0.45);
+  --text: #f2e2bf;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  font-family: system-ui, sans-serif;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#stage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+#screen {
+  display: block;
+  background: #000;
+  border-radius: 4px;
+}
+
+#controls {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 12px max(18px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+}
+
+.pad {
+  display: grid;
+  gap: 12px;
+  touch-action: none;
+}
+
+/* Mão esquerda: ◀ ▶ lado a lado. */
+#pad-left { grid-template-columns: repeat(2, 76px); grid-template-rows: 76px; }
+
+/* Mão direita: ▲ sobre ▼, e Ação ao lado ocupando as duas linhas. */
+#pad-right {
+  grid-template-columns: 68px 92px;
+  grid-template-rows: 68px 68px;
+  grid-template-areas: "up action" "down action";
+}
+#pad-right [data-key="up"] { grid-area: up; }
+#pad-right [data-key="down"] { grid-area: down; }
+#pad-right .action { grid-area: action; align-self: center; height: 92px; border-radius: 50%; }
+
+.key {
+  border-radius: 18px;
+  border: 2px solid var(--btn-border);
+  background: var(--btn);
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 700;
+  padding: 0;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.key.action { font-size: 17px; }
+.key.on {
+  background: var(--btn-on);
+  color: #ffd27a;
+}
+
+/* Paisagem: cada mão de um lado da tela do jogo, sem sobreposição. */
+@media (orientation: landscape) {
+  #app { flex-direction: row; }
+  #stage { order: 2; padding: 6px 0; }
+  #controls { display: contents; }
+  .pad { align-self: flex-end; margin-bottom: max(18px, env(safe-area-inset-bottom)); }
+  #pad-left {
+    order: 1;
+    grid-template-columns: repeat(2, 62px);
+    grid-template-rows: 62px;
+    gap: 10px;
+    margin-left: max(12px, env(safe-area-inset-left));
+    margin-right: 10px;
+  }
+  #pad-right {
+    order: 3;
+    grid-template-columns: 58px 76px;
+    grid-template-rows: 58px 58px;
+    gap: 10px;
+    margin-right: max(12px, env(safe-area-inset-right));
+    margin-left: 10px;
+  }
+  #pad-right .action { height: 76px; }
+}
